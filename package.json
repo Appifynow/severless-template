@@ -1,0 +1,7 @@
+{
+  "name": "serverless-app-template",
+  "private": true,
+  "workspaces": [
+    "apps/*"
+  ]
+}
