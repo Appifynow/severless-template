@@ -1,6 +1,9 @@
 {
   "name": "serverless-app-template",
   "private": true,
+  "scripts": {
+    "build": "npm run build --workspaces --if-present"
+  },
   "workspaces": [
     "apps/*"
   ]
