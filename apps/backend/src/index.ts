@@ -1,4 +1,4 @@
-import { APIGatewayProxyHandler } from 'aws-lambda';
+import { APIGatewayProxyResult, Context, Handler } from 'aws-lambda';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import {
   DynamoDBDocumentClient,
@@ -9,7 +9,16 @@ import {
 const client = new DynamoDBClient({});
 const dynamodb = DynamoDBDocumentClient.from(client);
 
-export const handler: APIGatewayProxyHandler = async (event, context) => {
+type LambdaHttpEvent = {
+  httpMethod: string;
+  path: string;
+  body?: string | null;
+};
+
+export const handler: Handler<LambdaHttpEvent, APIGatewayProxyResult> = async (
+  event,
+  context: Context,
+) => {
   const tableName = process.env.TABLE_NAME!;
 
   // 2 endpoints: get all products, a webhook to update products from crm,

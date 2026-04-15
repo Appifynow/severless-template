@@ -1,0 +1,40 @@
+{
+    "resource": "/api/test",
+    "path": "/products",
+    "httpMethod": "GET",
+    "headers": {
+        "Content-Type": "application/json",
+        "User-Agent": "Custom User Agent String"
+    },
+    "multiValueHeaders": {
+        "Content-Type": ["application/json"]
+    },
+    "queryStringParameters": {
+        "param1": "value1"
+    },
+    "multiValueQueryStringParameters": {
+        "param1": ["value1"]
+    },
+    "body": null,
+    "isBase64Encoded": false,
+    "requestContext": {
+        "resourceId": "123456",
+        "resourcePath": "/api/test",
+        "httpMethod": "GET",
+        "extendedRequestId": "request-id",
+        "requestTime": "09/Apr/2015:12:34:56 +0000",
+        "path": "/api/test",
+        "accountId": "123456789012",
+        "protocol": "HTTP/1.1",
+        "stage": "test",
+        "domainPrefix": "testPrefix",
+        "requestTimeEpoch": 1428582896000,
+        "requestId": "id=",
+        "identity": {
+            "sourceIp": "127.0.0.1",
+            "userAgent": "Custom User Agent String"
+        },
+        "domainName": "example.com",
+        "apiId": "1234567890"
+    }
+}
