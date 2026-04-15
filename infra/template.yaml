@@ -24,6 +24,14 @@ Resources:
     Type: AWS::S3::Bucket
     Properties:
       BucketName: !Sub ${AWS::StackName}-hosting-bucket
+      WebsiteConfiguration:
+        IndexDocument: index.html
+        ErrorDocument: index.html
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
 
   # 2. Origin Access Control (OAC) - Modern S3 security for CloudFront
   CloudFrontOriginAccessControl:
@@ -128,7 +136,7 @@ Resources:
         AuthType: NONE
       Environment:
         Variables:
-          TABLE_NAME: !Ref DataTable
+          TABLE_NAME: !Ref DataTable 
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref DataTable
@@ -137,6 +145,10 @@ Outputs:
   CloudFrontURL:
     Description: "Domain for your website"
     Value: !GetAtt WebsiteDistribution.DomainName
+  
+  S3WebsiteURL:
+    Description: "S3 static website hosting endpoint"
+    Value: !GetAtt HostingBucket.WebsiteURL
   
   LambdaAPIUrl:
     Description: "Public URL for backend API"

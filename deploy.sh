@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+set -a            # automatically export all variables
+source .env
+set +a            # disable automatic exporting
 # check if Site is set
 if [ -z "$Site" ]; then
   echo "Error: Site variable is not set. Please set the Site variable and try again."
