@@ -1,20 +1,114 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: 'Serverless app infrastructure'
+Transform: AWS::Serverless-2016-10-31
+Description: Complete Serverless SPA infrastructure with CloudFront, S3, and Backend.
+
+Parameters:
+  DomainName:
+    Type: String
+    Default: "none"
+    Description: "The custom domain (e.g., example.com). Leave as 'none' to skip certificate."
+  UseCustomDomain:
+    Type: String
+    Default: "false"
+    AllowedValues: ["true", "false"]
+    Description: "Set to 'true' to enable the ACM certificate and custom domain."
+
+Conditions:
+  EnableCustomDomain: !Equals [ !Ref UseCustomDomain, "true" ]
 
 Resources:
+  # --- FRONTEND RESOURCES ---
+
+  # 1. Private S3 Bucket (CloudFront will access this)
   HostingBucket:
-    Type: 'AWS::S3::Bucket'
+    Type: AWS::S3::Bucket
     Properties:
-      BucketName: !Sub '${AWS::StackName}-hosting-bucket'
-      AccessControl: PublicRead
-      WebsiteConfiguration:
-        IndexDocument: index.html
-        ErrorDocument: index.html
+      BucketName: !Sub ${AWS::StackName}-hosting-bucket
+
+  # 2. Origin Access Control (OAC) - Modern S3 security for CloudFront
+  CloudFrontOriginAccessControl:
+    Type: AWS::CloudFront::OriginAccessControl
+    Properties:
+      OriginAccessControlConfig:
+        Name: !Sub ${AWS::StackName}-OAC
+        OriginAccessControlOriginType: s3
+        SigningBehavior: always
+        SigningProtocol: sigv4
+
+  # 3. SSL Certificate (Conditional)
+  WebsiteCertificate:
+    Type: AWS::CertificateManager::Certificate
+    Condition: EnableCustomDomain
+    Properties:
+      DomainName: !Ref DomainName
+      ValidationMethod: DNS
+
+  # 4. CloudFront Distribution (React SPA Support)
+  WebsiteDistribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Enabled: true
+        DefaultRootObject: index.html
+        Aliases: !If [EnableCustomDomain, [!Ref DomainName], !Ref "AWS::NoValue"]
+        
+        # SPA Fix: Redirects 404/403 errors back to index.html for React Router
+        CustomErrorResponses:
+          - ErrorCode: 404
+            ResponseCode: 200
+            ResponsePagePath: /index.html
+          - ErrorCode: 403
+            ResponseCode: 200
+            ResponsePagePath: /index.html
+
+        Origins:
+          - Id: S3Origin
+            DomainName: !GetAtt HostingBucket.RegionalDomainName
+            OriginAccessControlId: !Ref CloudFrontOriginAccessControl
+            S3OriginConfig:
+              OriginAccessIdentity: "" # Empty when using OAC
+        
+        DefaultCacheBehavior:
+          TargetOriginId: S3Origin
+          ViewerProtocolPolicy: redirect-to-https
+          AllowedMethods: [GET, HEAD, OPTIONS]
+          CachedMethods: [GET, HEAD]
+          ForwardedValues:
+            QueryString: false
+            Cookies:
+              Forward: none
+
+        ViewerCertificate: !If 
+          - EnableCustomDomain
+          - AcmCertificateArn: !Ref WebsiteCertificate
+            SslSupportMethod: sni-only
+            MinimumProtocolVersion: TLSv1.2_2021
+          - CloudFrontDefaultCertificate: true
+
+  # 5. Fixed Bucket Policy (Service Principal Syntax)
+  HostingBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref HostingBucket
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: AllowCloudFrontServicePrincipal
+            Effect: Allow
+            Principal:
+              Service: "cloudfront.amazonaws.com"
+            Action: s3:GetObject
+            Resource: !Sub arn:aws:s3:::${HostingBucket}/*
+            Condition:
+              StringLike:
+                AWS:SourceArn: !Sub arn:aws:partition:cloudfront::${AWS::AccountId}:distribution/*
+
+  # --- BACKEND RESOURCES ---
 
   DataTable:
-    Type: 'AWS::DynamoDB::Table'
+    Type: AWS::DynamoDB::Table
     Properties:
-      TableName: !Sub '${AWS::StackName}-data-table'
+      TableName: !Sub ${AWS::StackName}-data-table
       AttributeDefinitions:
         - AttributeName: id
           AttributeType: S
@@ -24,14 +118,14 @@ Resources:
       BillingMode: PAY_PER_REQUEST
 
   APIFunction:
-    Type: 'AWS::Lambda::Function'
-    FunctionUrlConfig:
-        AuthType: NONE
+    Type: AWS::Serverless::Function
     Properties:
-      FunctionName: !Sub '${AWS::StackName}-function'
-      Runtime: nodejs22.x
+      FunctionName: !Sub ${AWS::StackName}-function
+      Runtime: nodejs20.x
       Handler: index.handler
-      CodeUri: /apps/backend/dist/index.js
+      CodeUri: ../apps/backend/dist/
+      FunctionUrlConfig:
+        AuthType: NONE
       Environment:
         Variables:
           TABLE_NAME: !Ref DataTable
@@ -40,14 +134,10 @@ Resources:
             TableName: !Ref DataTable
 
 Outputs:
-  HostingBucketName:
-    Description: 'Name of the S3 bucket for hosting'
-    Value: !Ref HostingBucket
-    Export:
-      Name: !Sub '${AWS::StackName}-HostingBucket'
-
-  DataTableName:
-    Description: 'Name of the DynamoDB table'
-    Value: !Ref DataTable
-    Export:
-      Name: !Sub '${AWS::StackName}-DataTable'
+  CloudFrontURL:
+    Description: "Domain for your website"
+    Value: !GetAtt WebsiteDistribution.DomainName
+  
+  LambdaAPIUrl:
+    Description: "Public URL for backend API"
+    Value: !GetAtt APIFunctionUrl.FunctionUrl
