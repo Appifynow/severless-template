@@ -22,4 +22,4 @@ This is a monorepo containing a React frontend, AWS Lambda backend, and CloudFor
 - Upload the `dist` folder to the S3 bucket.
 - Package and deploy the Lambda functions.
 
-```cloudformation deploy --template-file template.yaml --stack-name your-stack-name```
+```cloudformation deploy --template-file infra/template.yaml --stack-name test-stack```

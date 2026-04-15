@@ -23,31 +23,15 @@ Resources:
           KeyType: HASH
       BillingMode: PAY_PER_REQUEST
 
-  HelloFunction:
+  APIFunction:
     Type: 'AWS::Lambda::Function'
+    FunctionUrlConfig:
+        AuthType: NONE
     Properties:
-      FunctionName: !Sub '${AWS::StackName}-hello'
-      Runtime: nodejs18.x
-      Handler: index.hello
-      Code:
-        ZipFile: |
-          const { DynamoDBClient, PutItemCommand } = require('@aws-sdk/client-dynamodb');
-          const client = new DynamoDBClient({ region: process.env.AWS_REGION });
-
-          exports.hello = async (event) => {
-            const params = {
-              TableName: process.env.TABLE_NAME,
-              Item: {
-                id: { S: 'test' },
-                data: { S: JSON.stringify(event) }
-              }
-            };
-            await client.send(new PutItemCommand(params));
-            return {
-              statusCode: 200,
-              body: JSON.stringify({ message: 'Hello from Lambda!', event }),
-            };
-          };
+      FunctionName: !Sub '${AWS::StackName}-function'
+      Runtime: nodejs22.x
+      Handler: index.handler
+      CodeUri: /apps/backend/dist/index.js
       Environment:
         Variables:
           TABLE_NAME: !Ref DataTable
