@@ -14,53 +14,65 @@ type LambdaHttpEvent = {
   path: string;
   body?: string | null;
 };
+const AddProduct = async (tableName: string, product: { id: string; name: string; price: number }) => {
+      await dynamodb.send(
+        new PutCommand({
+          TableName: tableName,
+          Item:product,
+        }),
+      );
+  }
+
+  const getProducts = async (tableName: string) => {
+    const result = await dynamodb.send(new ScanCommand({ TableName: tableName }));
+    return result.Items;
+  }
+
+  const response = (statusCode: number, body: any): APIGatewayProxyResult => ({
+    statusCode,
+    body: JSON.stringify(body),
+  });
 
 export const handler: Handler<LambdaHttpEvent, APIGatewayProxyResult> = async (
   event,
   context: Context,
 ) => {
   const tableName = process.env.TABLE_NAME!;
+  if(event.path === '/products'){
+    if (event.httpMethod === 'GET') {
+      try {
+        const products = await getProducts(tableName);
 
-  // 2 endpoints: get all products, a webhook to update products from crm,
-  if (event.httpMethod === 'GET' && event.path === '/products') {
-    try {
-      const result = await dynamodb.send(new ScanCommand({ TableName: tableName }));
-      return {
-        statusCode: 200,
-        body: JSON.stringify(result.Items),
-      };
-    } catch (error) {
-      return {
-        statusCode: 500,
-        body: JSON.stringify({ error: 'Failed to fetch products' }),
-      };
+        return response(200, products);
+      } catch (error) {
+        console.error('Error fetching products:', error);
+        return response(500, { message: 'Error fetching products' });
+      }
+    }
+    if (event.httpMethod === 'POST') {
+      if (!event.body) {
+        return response(400, { message: 'Missing request body' });
+      }
+      try {
+        const body = JSON.parse(event.body);
+        await AddProduct(tableName, body);
+        return response(201, { message: 'Product added successfully' });
+      } catch (error) {
+        console.error('Error adding product:', error);
+        return response(500, { message: 'Error adding product' });
+      }
     }
   }
-  if (event.httpMethod === 'POST' && event.path === '/webhook') {
-    try {
-      const body = JSON.parse(event.body || '{}');
-      // Process the webhook data and update DynamoDB accordingly
-      await dynamodb.send(
-        new PutCommand({
-          TableName: tableName,
-          Item: { id: body.id, name: body.name, price: body.price },
-        }),
-      );
-      return {
-        statusCode: 200,
-        body: JSON.stringify({ message: 'Product updated successfully' }),
-      };
-    } catch (error) {
-      return {
-        statusCode: 500,
-        body: JSON.stringify({ error: 'Failed to update product' }),
-      };
+  if(event.path === '/contacts' && event.httpMethod === 'POST'){
+    if (!event.body) {
+      return response(400, { message: 'Missing request body' });
     }
+    // waiting on zoho api docs to implement contact creation, will add code here to create a contact in zoho crm when this endpoint is hit 
+    console.log('adding a new contact')
+
   }
 
-  return {
-    statusCode: 404,
-    body: JSON.stringify({ error: 'Not Found' }),
-  };
+  return response(404, { message: 'Not Found' });
+  
+}
 
-};
