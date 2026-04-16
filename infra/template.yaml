@@ -12,6 +12,18 @@ Parameters:
     Default: "false"
     AllowedValues: ["true", "false"]
     Description: "Set to 'true' to enable the ACM certificate and custom domain."
+  ZOHOCLIENTID:
+    Type: String
+    Description: Your Zoho Client ID
+    NoEcho: true  # Recommended for secrets
+  ZOHOCLIENTSECRET:
+    Type: String
+    NoEcho: true  # Recommended for secrets
+  ZOHOACCESSTOKEN:
+    Type: String
+  ZOHOREFRESHTOKEN:
+    Type: String
+    NoEcho: true  # Recommended for secrets
 
 Conditions:
   EnableCustomDomain: !Equals [ !Ref UseCustomDomain, "true" ]
@@ -136,6 +148,10 @@ Resources:
         AuthType: NONE
       Environment:
         Variables:
+          ZOHO_CLIENT_ID: !Ref ZOHOCLIENTID
+          ZOHO_CLIENT_SECRET: !Ref ZOHOCLIENTSECRET
+          ZOHO_ACCESS_TOKEN: !Ref ZOHOACCESSTOKEN
+          ZOHO_REFRESH_TOKEN: !Ref ZOHOREFRESHTOKEN
           TABLE_NAME: !Ref DataTable 
       Policies:
         - DynamoDBCrudPolicy:
