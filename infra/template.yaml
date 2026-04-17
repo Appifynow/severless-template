@@ -40,10 +40,10 @@ Resources:
         IndexDocument: index.html
         ErrorDocument: index.html
       PublicAccessBlockConfiguration:
-        BlockPublicAcls: true
-        BlockPublicPolicy: true
-        IgnorePublicAcls: true
-        RestrictPublicBuckets: true
+        BlockPublicAcls: false
+        BlockPublicPolicy: false
+        IgnorePublicAcls: false
+        RestrictPublicBuckets: false
 
   # 2. Origin Access Control (OAC) - Modern S3 security for CloudFront
   CloudFrontOriginAccessControl:
@@ -113,15 +113,11 @@ Resources:
       PolicyDocument:
         Version: '2012-10-17'
         Statement:
-          - Sid: AllowCloudFrontServicePrincipal
+          - Sid: AllowPublicAcess
             Effect: Allow
-            Principal:
-              Service: "cloudfront.amazonaws.com"
+            Principal: "*"
             Action: s3:GetObject
             Resource: !Sub arn:aws:s3:::${HostingBucket}/*
-            Condition:
-              StringLike:
-                AWS:SourceArn: !Sub arn:aws:partition:cloudfront::${AWS::AccountId}:distribution/*
 
   # --- BACKEND RESOURCES ---
 
