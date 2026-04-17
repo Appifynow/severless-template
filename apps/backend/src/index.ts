@@ -173,10 +173,11 @@ export const handler: APIGatewayProxyHandlerV2 = async (
         console.error('Skipping product with missing id:', product);
         continue;
       }
+      const backupImage = 'https://plus.unsplash.com/premium_vector-1737035301774-79613c87d8bb?q=80&w=1160&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D';
 
       const item = {
         ...product,
-        photo: 'https://plus.unsplash.com/premium_vector-1737035301774-79613c87d8bb?q=80&w=1160&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
+        photo: await getProductImage(product.id, accessToken).then((url) => url || backupImage).catch(() => backupImage),
       };
 
       try {
