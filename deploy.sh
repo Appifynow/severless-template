@@ -38,14 +38,14 @@ curl -X POST "$VITE_API_URL/update"
 
 ## set up notification for change in products to hit the lambda function update url.
 #need a new scope for this: ZohoBigin.notifications.ALL
-# export tempToken=$(curl -sSX POST "https://zohoapis.com/oauth/v2/token?refresh_token=$ZOHO_REFRESH_TOKEN&client_id=$ZOHO_CLIENT_ID&client_secret=$ZOHO_CLIENT_SECRET&grant_type=refresh_token" -H "Content-Type: application/x-www-form-urlencoded" | jq -r '.access_token')
-# curl -X POST https://zohoapis.com/bigin/v2/actions/watch \
-#   -H "Authorization: Zoho-oauthtoken $tempToken" \
-#   -H "Content-Type: application/json" \
-#   -d '{
-#     "notify_url": "https://'"$VITE_API_URL"'/update",
-#     "events": [
-#         "Products.ALL"
-#     ],
-#     "channel_id": "'"$Site"'"
-# }'
+export tempToken=$(curl -sSX POST "https://accounts.zoho.com/oauth/v2/token?refresh_token=$ZOHO_REFRESH_TOKEN&client_id=$ZOHO_CLIENT_ID&client_secret=$ZOHO_CLIENT_SECRET&grant_type=refresh_token" -H "Content-Type: application/x-www-form-urlencoded" | jq -r '.access_token')
+curl -X POST https://zohoapis.com/bigin/v2/actions/watch \
+  -H "Authorization: Zoho-oauthtoken $tempToken" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "notify_url": "https://'"$VITE_API_URL"'/update",
+    "events": [
+        "Products.ALL"
+    ],
+    "channel_id": "'"$Site"'"
+}'
