@@ -61,6 +61,9 @@ const AddProduct = async (tableName: string, product: ZOHOProduct & { photo: str
     body: JSON.stringify(body),
     headers: {
       ...headers,
+      'Access-Control-Allow-Origin': '*', // change this to your frontend domain
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
     },
   });
 
@@ -96,11 +99,7 @@ export const handler: APIGatewayProxyHandlerV2 = async (
     }
   }
   if(method === 'OPTIONS'){
-    return response(200, { message: 'OK' }, {
-      'Access-Control-Allow-Origin': '*', // change this to your frontend domain
-      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-    });
+    return response(200, { message: 'OK' });
   }
   if(path === '/contacts' && method === 'POST'){
     if (!event.body) {
