@@ -1,51 +1,68 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
-Description: Complete Serverless SPA infrastructure with CloudFront, S3, and Backend.
+Description: Complete Serverless SPA infrastructure with CloudFront, S3, and Route 53 DNS.
 
 Parameters:
   DomainName:
     Type: String
     Default: "none"
-    Description: "The custom domain (e.g., example.com). Leave as 'none' to skip certificate."
+    Description: "The custom domain (e.g., example.com). Required for Route 53 migration."
   UseCustomDomain:
     Type: String
     Default: "false"
     AllowedValues: ["true", "false"]
-    Description: "Set to 'true' to enable the ACM certificate and custom domain."
+    Description: "Set to 'true' to enable the ACM certificate and Route 53 records."
   ZOHOCLIENTID:
     Type: String
-    Description: Your Zoho Client ID
-    NoEcho: true  # Recommended for secrets
+    NoEcho: true
   ZOHOCLIENTSECRET:
     Type: String
-    NoEcho: true  # Recommended for secrets
+    NoEcho: true
   ZOHOACCESSTOKEN:
     Type: String
   ZOHOREFRESHTOKEN:
     Type: String
-    NoEcho: true  # Recommended for secrets
+    NoEcho: true
 
 Conditions:
   EnableCustomDomain: !Equals [ !Ref UseCustomDomain, "true" ]
 
 Resources:
+  # --- DNS & SSL RESOURCES ---
+
+  # 1. Route 53 Hosted Zone (You will get Nameservers from this to put in IONOS)
+  WebsiteHostedZone:
+    Type: AWS::Route53::HostedZone
+    Condition: EnableCustomDomain
+    Properties:
+      Name: !Ref DomainName
+
+  # 2. SSL Certificate (Automatically validates via DNS in the new Hosted Zone)
+  WebsiteCertificate:
+    Type: AWS::CertificateManager::Certificate
+    Condition: EnableCustomDomain
+    Properties:
+      DomainName: !Ref DomainName
+      SubjectAlternativeNames:
+        - !Sub "*.${DomainName}"
+      ValidationMethod: DNS
+      DomainValidationOptions:
+        - DomainName: !Ref DomainName
+          HostedZoneId: !Ref WebsiteHostedZone
+
   # --- FRONTEND RESOURCES ---
 
-  # 1. Private S3 Bucket (CloudFront will access this)
-  HostingBucket:
+  # 3. Private S3 Bucket (Public access blocked; only CloudFront accesses via OAC)
+  HostingBucket:  
     Type: AWS::S3::Bucket
     Properties:
       BucketName: !Sub ${AWS::StackName}-hosting-bucket
-      WebsiteConfiguration:
-        IndexDocument: index.html
-        ErrorDocument: index.html
       PublicAccessBlockConfiguration:
-        BlockPublicAcls: false
-        BlockPublicPolicy: false
-        IgnorePublicAcls: false
-        RestrictPublicBuckets: false
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
 
-  # 2. Origin Access Control (OAC) - Modern S3 security for CloudFront
   CloudFrontOriginAccessControl:
     Type: AWS::CloudFront::OriginAccessControl
     Properties:
@@ -55,24 +72,15 @@ Resources:
         SigningBehavior: always
         SigningProtocol: sigv4
 
-  # 3. SSL Certificate (Conditional)
-  WebsiteCertificate:
-    Type: AWS::CertificateManager::Certificate
-    Condition: EnableCustomDomain
-    Properties:
-      DomainName: !Ref DomainName
-      ValidationMethod: DNS
-
-  # 4. CloudFront Distribution (React SPA Support)
+  # 4. CloudFront Distribution
   WebsiteDistribution:
     Type: AWS::CloudFront::Distribution
     Properties:
       DistributionConfig:
         Enabled: true
         DefaultRootObject: index.html
-        Aliases: !If [EnableCustomDomain, [!Ref DomainName], !Ref "AWS::NoValue"]
+        Aliases: !If [EnableCustomDomain, [!Ref DomainName, !Sub "www.${DomainName}"], !Ref "AWS::NoValue"]
         
-        # SPA Fix: Redirects 404/403 errors back to index.html for React Router
         CustomErrorResponses:
           - ErrorCode: 404
             ResponseCode: 200
@@ -86,17 +94,14 @@ Resources:
             DomainName: !GetAtt HostingBucket.RegionalDomainName
             OriginAccessControlId: !Ref CloudFrontOriginAccessControl
             S3OriginConfig:
-              OriginAccessIdentity: "" # Empty when using OAC
+              OriginAccessIdentity: ""
         
         DefaultCacheBehavior:
           TargetOriginId: S3Origin
           ViewerProtocolPolicy: redirect-to-https
           AllowedMethods: [GET, HEAD, OPTIONS]
           CachedMethods: [GET, HEAD]
-          ForwardedValues:
-            QueryString: false
-            Cookies:
-              Forward: none
+          CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6 # Optimized Caching Policy
 
         ViewerCertificate: !If 
           - EnableCustomDomain
@@ -105,7 +110,7 @@ Resources:
             MinimumProtocolVersion: TLSv1.2_2021
           - CloudFrontDefaultCertificate: true
 
-  # 5. Fixed Bucket Policy (Service Principal Syntax)
+  # 5. Secure S3 Bucket Policy (Allows ONLY CloudFront to read)
   HostingBucketPolicy:
     Type: AWS::S3::BucketPolicy
     Properties:
@@ -113,11 +118,37 @@ Resources:
       PolicyDocument:
         Version: '2012-10-17'
         Statement:
-          - Sid: AllowPublicAcess
-            Effect: Allow
-            Principal: "*"
+          - Effect: Allow
+            Principal:
+              Service: cloudfront.amazonaws.com
             Action: s3:GetObject
             Resource: !Sub arn:aws:s3:::${HostingBucket}/*
+            Condition:
+              StringEquals:
+                AWS:SourceArn: !Sub arn:aws:cloudfront::${AWS::AccountId}:distribution/${WebsiteDistribution}
+
+  # 6. Route 53 Records (Apex and WWW Alias)
+  ApexRecord:
+    Type: AWS::Route53::RecordSet
+    Condition: EnableCustomDomain
+    Properties:
+      HostedZoneId: !Ref WebsiteHostedZone
+      Name: !Ref DomainName
+      Type: A
+      AliasTarget:
+        DNSName: !GetAtt WebsiteDistribution.DomainName
+        HostedZoneId: Z2FDTNDATAQYW2 # Static ID for CloudFront
+
+  WWWRecord:
+    Type: AWS::Route53::RecordSet
+    Condition: EnableCustomDomain
+    Properties:
+      HostedZoneId: !Ref WebsiteHostedZone
+      Name: !Sub "www.${DomainName}"
+      Type: A
+      AliasTarget:
+        DNSName: !GetAtt WebsiteDistribution.DomainName
+        HostedZoneId: Z2FDTNDATAQYW2
 
   # --- BACKEND RESOURCES ---
 
@@ -155,13 +186,12 @@ Resources:
 
 Outputs:
   CloudFrontURL:
-    Description: "Domain for your website"
     Value: !GetAtt WebsiteDistribution.DomainName
   
-  S3WebsiteURL:
-    Description: "S3 static website hosting endpoint"
-    Value: !GetAtt HostingBucket.WebsiteURL
+  Nameservers:
+    Description: "Copy these 4 values into your IONOS Nameserver settings"
+    Condition: EnableCustomDomain
+    Value: !Join [", ", !GetAtt WebsiteHostedZone.NameServers]
   
   LambdaAPIUrl:
-    Description: "Public URL for backend API"
     Value: !GetAtt APIFunctionUrl.FunctionUrl
