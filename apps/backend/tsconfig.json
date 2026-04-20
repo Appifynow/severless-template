@@ -4,10 +4,13 @@
     "target": "es2020",
     "lib": ["es2020"],
     "outDir": "dist",
+    "paths": {
+      "/opt/nodejs/index": ["./src/types/layer.d.ts"]
+    },
     "rootDir": "src",
     "strict": true,
     "esModuleInterop": true,
-    "types": ["node"],
+    "types": ["node", "aws-lambda",],
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true
   },

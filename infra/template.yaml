@@ -171,10 +171,13 @@ Resources:
       Runtime: nodejs20.x
       Handler: index.handler
       CodeUri: ../apps/backend/dist/
+      Layers:
+        - !ImportValue CommonLayerArn
       FunctionUrlConfig:
         AuthType: NONE
       Environment:
         Variables:
+          DOMAIN: !Ref DomainName
           ZOHO_CLIENT_ID: !Ref ZOHOCLIENTID
           ZOHO_CLIENT_SECRET: !Ref ZOHOCLIENTSECRET
           ZOHO_ACCESS_TOKEN: !Ref ZOHOACCESSTOKEN

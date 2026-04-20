@@ -5,10 +5,11 @@ import {
   PutCommand,
   ScanCommand,
 } from '@aws-sdk/lib-dynamodb';
+import { respond } from './utils';
+import { handler as stripeHander } from './stripeHandler';
 
 const client = new DynamoDBClient({});
 const dynamodb = DynamoDBDocumentClient.from(client);
-
 
 type ZOHOProduct =  {
       "Product_Name": string,
@@ -56,21 +57,12 @@ const AddProduct = async (tableName: string, product: ZOHOProduct & { photo: str
     return result.Items;
   }
 
-  const response = (statusCode: number, body: any, headers?: Record<string, string>): APIGatewayProxyResult => ({
-    statusCode,
-    body: JSON.stringify(body),
-    headers: {
-      ...headers,
-      'Access-Control-Allow-Origin': '*', // change this to your frontend domain
-      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-    },
-  });
 
 export const handler: APIGatewayProxyHandlerV2 = async (
   event: APIGatewayProxyEventV2,
   context: Context,
 ) => {
+  stripeHander(event, context);
   const {method, path } = event.requestContext.http;
   const tableName = process.env.TABLE_NAME!;
   if(path === '/products'){
@@ -78,36 +70,36 @@ export const handler: APIGatewayProxyHandlerV2 = async (
       try {
         const products = await getProducts(tableName);
 
-        return response(200, products);
+        return respond(200, products);
       } catch (error) {
         console.error('Error fetching products:', error);
-        return response(500, { message: 'Error fetching products' });
+        return respond(500, { message: 'Error fetching products' });
       }
     }
     if (method === 'POST') {
       if (!event.body) {
-        return response(400, { message: 'Missing request body' });
+        return respond(400, { message: 'Missing request body' });
       }
       try {
         const body = JSON.parse(event.body);
         await AddProduct(tableName, body);
-        return response(201, { message: 'Product added successfully' });
+        return respond(201, { message: 'Product added successfully' });
       } catch (error) {
         console.error('Error adding product:', error);
-        return response(500, { message: 'Error adding product' });
+        return respond(500, { message: 'Error adding product' });
       }
     }
   }
   if(method === 'OPTIONS'){
-    return response(200, { message: 'OK' });
+    return respond(200, { message: 'OK' });
   }
   if(path === '/contacts' && method === 'POST'){
     if (!event.body) {
-      return response(400, { message: 'Missing request body' });
+      return respond(400, { message: 'Missing request body' });
     }
     const {Last_Name, Email} = JSON.parse(event.body);
     if(!Last_Name){
-      return response(400, { message: 'Last_Name is required' });
+      return respond(400, { message: 'Last_Name is required' });
     }
     // waiting on zoho api docs to implement contact creation, will add code here to create a contact in zoho crm when this endpoint is hit 
    try{
@@ -119,10 +111,10 @@ export const handler: APIGatewayProxyHandlerV2 = async (
       },
       body: JSON.stringify({ data: [event.body] })
     });
-    return response(201, { message: 'Contact creation triggered' });
+    return respond(201, { message: 'Contact creation triggered' });
   }catch(error: any){
     console.error('Error creating contact in Zoho:', error);
-    return response(500, { message: error.message || 'Error creating contact in Zoho' });
+    return respond(500, { message: error.message || 'Error creating contact in Zoho' });
   }
     
   }
@@ -161,7 +153,7 @@ export const handler: APIGatewayProxyHandlerV2 = async (
 
     if (!json.data || json.data.length === 0) {
       console.log('Zoho returned no products');
-      return response(200, { message: 'No products found in Zoho' });
+      return respond(200, { message: 'No products found in Zoho' });
     }
 
     console.log(`Fetched ${json.data.length} products from Zoho`);
@@ -193,7 +185,7 @@ export const handler: APIGatewayProxyHandlerV2 = async (
     }
 
     console.log('Sync completed successfully');
-    return response(200, { message: 'Synced with Zoho successfully' });
+    return respond(200, { message: 'Synced with Zoho successfully' });
 
   } catch (error: any) {
     console.error('Sync failed:', error);
@@ -203,14 +195,14 @@ export const handler: APIGatewayProxyHandlerV2 = async (
       console.error('Zoho error body:', body);
     }
 
-    return response(500, { message: 'Error syncing with Zoho' });
+    return respond(500, { message: 'Error syncing with Zoho' });
   }
 }
 
 
 
 
-  return response(404, { message: 'Not Found' });
+  return respond(404, { message: 'Not Found' });
   
 }
 

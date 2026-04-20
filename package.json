@@ -8,5 +8,8 @@
   },
   "workspaces": [
     "apps/*"
-  ]
+  ],
+  "dependencies": {
+    "use-shopping-cart": "^3.2.0"
+  }
 }
