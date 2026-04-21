@@ -34,7 +34,7 @@ aws s3 rm s3://"$Site-stack-hosting-bucket" --recursive
 aws s3 sync dist/ s3://"$Site-stack-hosting-bucket" --delete 
 
 #call update function to populate products on first deploy
-curl -X POST "$VITE_API_URL/update"
+curl -X PUT "$VITE_API_URL"products"
 
 ## set up notification for change in products to hit the lambda function update url.
 #need a new scope for this: ZohoBigin.notifications.ALL

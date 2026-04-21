@@ -1,6 +1,5 @@
 import { APIGatewayProxyEventV2, Context } from "aws-lambda";
 import { getStripeClient } from "/opt/nodejs/index";
-const stripe = getStripeClient(process.env.STRIPE_KEY!);
 import type { CartDetails } from "use-shopping-cart/core";
 import { respond } from "./utils";
 
@@ -15,6 +14,12 @@ export const handler = async (
   req: APIGatewayProxyEventV2,
   context: Context,
 ) => {
+    const stripeKey = process.env.STRIPE_SECRET_KEY
+    if(typeof stripeKey !== 'string' || stripeKey.length === 0 ){
+        console.warn('stripe key is missing')
+        return;
+    }
+    const stripe = getStripeClient(process.env. STRIPE_SECRET_KEY!);
     const { method, path } = req.requestContext.http;
     // if the request is not for stripe, just return, allow rest of handlers
     if(path === '/checkout' && method === 'POST'){
@@ -28,7 +33,7 @@ export const handler = async (
             return respond(400, { message: 'Invalid request body' });
         }
 
-        const cartDetails = JSON.parse(req.body);
+        const { cartDetails } = body
         const line_items = Object.values<CartDetails>(cartDetails).map((item) => ({
             price_data: {
                 currency: 'usd',
