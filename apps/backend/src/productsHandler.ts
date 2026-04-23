@@ -1,6 +1,7 @@
 import { APIGatewayProxyEventV2 } from "aws-lambda"
 import { Context } from "vm"
-import { getAccessToken, type HTTPMethods, respond } from "./utils"
+import { type HTTPMethods, respond } from "./utils"
+import zoho from './zoho'
 import { DynamoDBClient, } from "@aws-sdk/client-dynamodb";
 import { DynamoDBDocumentClient, PutCommand, ScanCommand} from "@aws-sdk/lib-dynamodb";
 export const productsHandler = async ( 
@@ -71,7 +72,7 @@ if (method === 'GET') {
         console.log('Starting Zoho → DynamoDB sync ');
         
           try {
-            const accessToken = await getAccessToken();
+            const accessToken = await zoho.getAccessToken();
             const bearerToken = `Zoho-oauthtoken ${accessToken}`;
         
             const url =

@@ -1,8 +1,9 @@
 import {  APIGatewayProxyEventV2, APIGatewayProxyHandlerV2, APIGatewayProxyResult, Context,  } from 'aws-lambda';
-import { getAccessToken, HTTPMethods, respond } from './utils';
+import { HTTPMethods, respond } from './utils';
 import { handler as stripeHander } from './stripeHandler';
 import { productsHandler } from './productsHandler';
 import { contactHandler } from './contactsHandler';
+import { stripeWebhookHandler } from './stripeWebhookHandler';
 
 
 export const handler: APIGatewayProxyHandlerV2 = async (
@@ -23,6 +24,9 @@ export const handler: APIGatewayProxyHandlerV2 = async (
   
   if(path === '/contacts'){
     res = await contactHandler(event, context, method as HTTPMethods)
+  }
+  if(path === '/stripe-webhook'){
+    res = await stripeWebhookHandler(event, context, method as HTTPMethods)
   }
   if(!res) res = respond(404, { message: 'Not Found' });
   return res;

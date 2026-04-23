@@ -1,17 +1,19 @@
 {
   "compilerOptions": {
-    "module": "commonjs",
+    "module": "es2022",
+    "moduleResolution": "bundler",
     "target": "es2020",
     "lib": ["es2020"],
     "outDir": "dist",
     "paths": {
-      "/opt/nodejs/index": ["./src/types/layer.d.ts"]
+      "/opt/nodejs/*": ["./src/types/layer.d.ts"]
     },
     "rootDir": "src",
     "strict": true,
     "esModuleInterop": true,
     "types": ["node", "aws-lambda",],
     "skipLibCheck": true,
+    "allowSyntheticDefaultImports": true,
     "forceConsistentCasingInFileNames": true
   },
   "include": ["src/**/*"],

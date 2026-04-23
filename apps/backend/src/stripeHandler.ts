@@ -1,6 +1,6 @@
 import { APIGatewayProxyEventV2, Context } from "aws-lambda";
-import { getStripeClient } from "/opt/nodejs/index";
-import type { CartDetails } from "use-shopping-cart/core";
+import { getStripeClient } from "/opt/nodejs/index.js";
+import type { CartDetails, CartEntry } from "use-shopping-cart/core";
 import { respond } from "./utils";
 
 interface sessionRequestBody {
@@ -34,12 +34,12 @@ export const handler = async (
         }
 
         const { cartDetails } = body
-        const line_items = Object.values<CartDetails>(cartDetails).map((item) => ({
+        const line_items = Object.values<CartEntry>(cartDetails).map((item) => ({
             price_data: {
                 currency: 'usd',
                 product_data: {
                 name: item.name,
-                images: [item.image]
+                images: item.image ? [item.image] : []
                 },
                 unit_amount: item.price
             },
@@ -53,7 +53,7 @@ export const handler = async (
         cancel_url: req.headers.origin
         });
 
-        return respond(200, { sessionUrl: session.url });
+        return respond(200, { sessionUrl: session.url, id: session.id });
     }
     return;
 }

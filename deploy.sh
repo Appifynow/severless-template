@@ -20,12 +20,17 @@ aws cloudformation deploy \
     ZOHOCLIENTSECRET="$ZOHO_CLIENT_SECRET" \
     ZOHOACCESSTOKEN="$ZOHO_ACCESS_TOKEN" \
     ZOHOREFRESHTOKEN="$ZOHO_REFRESH_TOKEN" \
+    STRIPESECRETKEY="$STRIPE_SECRET_KEY" \
   --capabilities CAPABILITY_IAM CAPABILITY_AUTO_EXPAND
 
 
 # capture lambda function url from stack then update frontend config with it
-export VITE_API_URL=$(aws cloudformation describe-stacks --stack-name "$Site-stack" --query "Stacks[0].Outputs[?OutputKey=='LambdaAPIUrl'].OutputValue" --output text)  
- echo aws cloudformation describe-stacks --stack-name "$Site-stack" --query "Stacks[0].Outputs[?OutputKey=='Nameservers'].OutputValue" --output text  
+export VITE_API_URL=$(aws cloudformation describe-stacks --stack-name "$Site-stack" --query "Stacks[0].Outputs[?OutputKey=='LambdaAPIUrl'].OutputValue" --output text)
+
+# create stripe webhooks ( requires VITE_API_URL)
+npx tsx ./infra/webhooks.mts
+
+echo aws cloudformation describe-stacks --stack-name "$Site-stack" --query "Stacks[0].Outputs[?OutputKey=='Nameservers'].OutputValue" --output text  
   #upload site to s3 bucket
 cd apps/frontend && npm run build
 #empty the bucket before uploading new files
@@ -43,9 +48,13 @@ curl -X POST https://zohoapis.com/bigin/v2/actions/watch \
   -H "Authorization: Zoho-oauthtoken $tempToken" \
   -H "Content-Type: application/json" \
   -d '{
-    "notify_url": "https://'"$VITE_API_URL"'/update",
-    "events": [
-        "Products.ALL"
-    ],
-    "channel_id": "'"$Site"'"
-}'
+    "watch": [
+       {
+            "channel_id": "$Site",
+            "events": [
+                "Products.all"
+            ],
+            "token": "${Site}",
+            "notify_url": "'$VITE_API_URL'update"
+        }]
+      }'

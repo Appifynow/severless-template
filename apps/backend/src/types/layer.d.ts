@@ -1,4 +1,3 @@
-// any types defined in the lambda layer should be added here
 import type { Stripe } from 'stripe';
 
 export {}

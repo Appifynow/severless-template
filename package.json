@@ -1,5 +1,5 @@
 {
-  "name": "serverless-app-template",
+  "name": "leblis.com",
   "private": true,
   "scripts": {
     "build": "npm run build --workspaces --if-present",
@@ -11,5 +11,10 @@
   ],
   "dependencies": {
     "use-shopping-cart": "^3.2.0"
+  },
+  "devDependencies": {
+    "dotenv": "^17.4.2",
+    "stripe": "^22.0.2",
+    "tsx": "^4.21.0"
   }
 }
