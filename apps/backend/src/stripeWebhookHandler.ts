@@ -74,6 +74,7 @@ enum StripeEvents {
                         id: '7374418000000091023',
                         name: 'Order Fullfillment',
                     },
+                    Closing_Date: new Date().toISOString().split('T')[0],
                     Sub_Pipeline: '7374418000000607001', // these can be found in url on zoho page
                     Stage: 'Order Received',
                     Amount: checkout.amount_total ?? 0,

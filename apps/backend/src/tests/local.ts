@@ -7,10 +7,17 @@ import {
 import dotenv from 'dotenv';
 
 
-dotenv.config()
+dotenv.config({path: '../../.env'})
 
 const app = express();
 app.use(express.json());
+
+const products: any = []
+
+app.get('/products', (req, res)=>{
+  return res.header( 'Access-Control-Allow-Origin', '*', ).header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT',).status(200).send(
+    [...products])
+})
 
 app.all(/.*/, async (req: Request, res: Response) => {
   // Construct the V2 Event structure

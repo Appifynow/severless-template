@@ -47,7 +47,7 @@ export const handler = async (
                 },
                 unit_amount: item.price
             },
-            metadata: (item.product_data as any)?.metadata,
+            metadata: (item.product_data as any),
             quantity: item.quantity
             }))
 
