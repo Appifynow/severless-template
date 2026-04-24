@@ -10,26 +10,33 @@ export const handler: APIGatewayProxyHandlerV2 = async (
   event: APIGatewayProxyEventV2,
   context: Context,
 ) => {
+  try {
   let res;
   const {method, path } = event.requestContext.http;
   if(method === 'OPTIONS'){
     return respond(200, { message: 'OK' });
   }
-  res = await stripeHander(event, context);
+  if(path === '/checkout'){
+    res = await stripeHander(event, context).catch(e=> respond(500, e))
+  }
   
   
   if(path === '/products'){
-    res = await productsHandler(event, context, method as HTTPMethods)
+    res = await productsHandler(event, context, method as HTTPMethods).catch(e=> respond(500, e))
   }
   
   if(path === '/contacts'){
-    res = await contactHandler(event, context, method as HTTPMethods)
+    res = await contactHandler(event, context, method as HTTPMethods).catch(e=> respond(500, e))
   }
   if(path === '/stripe-webhook'){
-    res = await stripeWebhookHandler(event, context, method as HTTPMethods)
+    res = await stripeWebhookHandler(event, context, method as HTTPMethods).catch(e=> respond(500, e))
   }
   if(!res) res = respond(404, { message: 'Not Found' });
   return res;
+}
+ catch(e){
+  return respond(500, e)
+ }
   
 }
 

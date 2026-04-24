@@ -38,6 +38,11 @@ aws s3 rm s3://"$Site-stack-hosting-bucket" --recursive
 
 aws s3 sync dist/ s3://"$Site-stack-hosting-bucket" --delete 
 
+# invalidate cache
+echo invalidating cache
+export DIST_ID=$(aws cloudformation describe-stacks --stack-name "$Site-stack" --query "Stacks[0].Outputs[?OutputKey=='DistributionID'].OutputValue" --output text)
+aws cloudfront create-invalidation --distribution-id $"DIST_ID" --paths "/*
+
 #call update function to populate products on first deploy
 curl -X PUT "$VITE_API_URL"products"
 

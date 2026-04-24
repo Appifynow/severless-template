@@ -15,13 +15,13 @@ export const getAccessToken = async () => {
 }
 
 export const createNewContact = async (contact: Partial<BiginContact>, token?: string): Promise<ZOHORecordCreateResponse['data'][0]> => {
-  return fetch('https://www.zohoapis.com/bigin/v2/Contacts', {
+  return fetch('https://www.zohoapis.com/bigin/v2/Contacts/upsert', {
       method: 'POST',
       headers: {
         'Authorization': `Zoho-oauthtoken ${token ?? await getAccessToken()}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ data: [contact] })
+      body: JSON.stringify({ data: [contact], duplicate_check_fields: ['Last_Name', 'First_Name', 'Email'] })
     }).then(res=>res.json() as Promise<ZOHORecordCreateResponse>).then(contacts=>contacts.data[0]) // this function only creates one
 }
 

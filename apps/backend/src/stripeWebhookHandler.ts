@@ -1,8 +1,9 @@
 import { APIGatewayProxyEventV2, Context } from "aws-lambda";
-import { BiginContact, HTTPMethods, mapStripeToBigin, respond } from "./utils";
+import {  HTTPMethods, mapStripeToBigin, respond } from "./utils";
 import zoho, { ZOHODeal } from "./zoho.js";
 import crypto from 'crypto';
-import type Stripe from 'stripe'
+import type Stripe from 'stripe';
+const { getStripeClient } = await import(process.env.LOCAL ? './tests/mockedLayer' : "/opt/nodejs/index.js")
 
 
 enum StripeEvents {
@@ -18,18 +19,26 @@ enum StripeEvents {
      req: APIGatewayProxyEventV2,
      _: Context,
      method: HTTPMethods) =>{
-        let body;
-        try{
-            body = JSON.parse(req.body!);
+        console.log('webhook processing')
+        const stripeKey = process.env.STRIPE_SECRET_KEY
+        if(typeof stripeKey !== 'string' || stripeKey.length === 0 ){
+            console.warn('stripe key is missing')
+            return respond(500, new Error('stripe key is missing'))
         }
-        catch(e){
-            return respond(400, {message: 'failed to parse JSON'})
-        }
-        if(!body){
-            return respond(400, {message: 'no event in body'})
-        }
+        const stripe = getStripeClient(stripeKey);
+        
         if(method === 'POST'){
-            const event: StripeWebhookEvent = body // wrong
+            let body;
+            if(!req.body){
+                return respond(400, {message: 'no event in body'})
+            }
+            try{
+                body = JSON.parse(req.body);
+            }
+            catch(e){
+                return respond(400, {message: 'failed to parse JSON'})
+            }
+            const event: StripeWebhookEvent = body
 
             switch(event.type){
                 case StripeEvents.new_customer: {
@@ -42,8 +51,19 @@ enum StripeEvents {
             case StripeEvents.checkout_complete: {
                 // create a new deal
                 const checkout = event.data.object as Stripe.Checkout.Session
-                const customer = checkout.customer as Stripe.Customer
-                const products = checkout.line_items?.data.map(({quantity, object, price, id })=>({quantity, object, price, id }))
+                const customerId = checkout.customer as string | null ;
+                if(!customerId){
+                    return respond(400, {message: 'customer not found in event data'})
+                }
+                const customer = await stripe.customers.retrieve(customerId);
+                if(customer.deleted){
+                    return respond(200, {message: `customer was deleted on ${customer.lastResponse}`})
+                }
+                const line_items = await (stripe as Stripe).checkout.sessions.listLineItems(checkout.id)
+                const products = line_items.data.map(({quantity,description, price, metadata })=>{
+                    const id = metadata?.['zoho_product_id'] ?? ''
+                    return { quantity, name: description, price, id }
+            })
                 // may need to just find customer enstead of creating
                 const contact = mapStripeToBigin(customer);
                 const newCustomer = await zoho.createNewContact(contact)
@@ -58,10 +78,10 @@ enum StripeEvents {
                     Stage: 'Order Received',
                     Amount: checkout.amount_total ?? 0,
                     Contact_Name: { id: newCustomer.details.id },
-                    Associated_Products: products?.map(({quantity, object: name, price: List_Price, id })=>{
+                    Associated_Products: products?.map(({quantity, name, price: List_Price, id })=>{
                         return {
                             Product: {
-                                name,
+                                name: name ?? 'Unknown Product',
                                 id,
                             },
                             Quantity: quantity ?? 0,
@@ -70,10 +90,16 @@ enum StripeEvents {
                         }
                     })
                 };
+                console.log('deal', JSON.stringify(order))
 
                 return zoho.createDeal(order)
-                .then(_=> respond(200))
-                .catch(resp => respond(500, resp.message))
+                .then(async resp=> {
+                    if(resp.ok){
+                        return respond(200, { message: 'created new order'}) 
+                    }
+                    const error_message = await resp.text()
+                    return respond(500, {service: 'ZOHO', error: error_message })
+            })
                 
 
             }

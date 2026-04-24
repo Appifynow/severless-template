@@ -5,6 +5,7 @@
   "main": "dist/index.js",
   "type": "module",
   "scripts": {
+    "start": "tsx watch ./src/tests/local.ts",
     "prebuild": "tsc --noEmit",
     "build": "rm -rf dist && esbuild src/index.ts --bundle --external:@aws-sdk/* --external:/opt/nodejs/* --platform=node --format=esm --target=node22 --outfile=dist/index.mjs",
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -19,8 +20,10 @@
   },
   "devDependencies": {
     "@types/aws-lambda": "^8.10.130",
+    "@types/express": "^5.0.6",
     "@types/node": "^20.19.39",
     "esbuild": "^0.25.12",
+    "express": "^5.2.1",
     "stripe": "^22.0.2",
     "typescript": "^5.3.3"
   }

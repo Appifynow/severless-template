@@ -17,28 +17,28 @@ export type HTTPMethods = 'GET' | 'OPTION' | 'POST' | 'PUT';
 
 export function mapStripeToBigin(stripeCustomer: Stripe.Customer): Partial<BiginContact> {
   // Split name into First and Last for Bigin
-  const fullName = stripeCustomer.name || '';
+  const fullName = stripeCustomer.name ?? '';
   const nameParts = fullName.trim().split(/\s+/);
   
   // Bigin requires Last_Name. If Stripe name is empty, fallback to email prefix.
   const firstName = nameParts.length > 1 ? nameParts.slice(0, -1).join(' ') : '';
   const lastName = nameParts.length > 0 
     ? nameParts[nameParts.length - 1] 
-    : (stripeCustomer.email?.split('@')[0] || 'Unknown');
+    : (stripeCustomer.email?.split('@')[0] ?? 'Unknown');
 
   return {
-    First_Name: firstName || undefined,
+    First_Name: firstName ?? undefined,
     Last_Name: lastName, // Mandatory field in Bigin
-    Email: stripeCustomer.email || undefined,
-    Phone: stripeCustomer.phone || undefined,
-    Description: stripeCustomer.description || undefined,
+    Email: stripeCustomer.email ?? undefined,
+    Phone: stripeCustomer.phone ?? undefined,
+    Description: stripeCustomer.description ?? undefined,
     
     // Flatten Stripe address to Bigin mailing fields
-    Mailing_Street: stripeCustomer.address?.line1 || undefined,
-    Mailing_City: stripeCustomer.address?.city || undefined,
-    Mailing_State: stripeCustomer.address?.state || undefined,
-    Mailing_Zip: stripeCustomer.address?.postal_code || undefined,
-    Mailing_Country: stripeCustomer.address?.country || 'USA',
+    Mailing_Street: stripeCustomer.address?.line1 ?? undefined,
+    Mailing_City: stripeCustomer.address?.city ?? undefined,
+    Mailing_State: stripeCustomer.address?.state ?? undefined,
+    Mailing_Zip: stripeCustomer.address?.postal_code ?? undefined,
+    Mailing_Country: stripeCustomer.address?.country ?? 'USA',
 
     // Store the Stripe ID in a custom field if you have one created (recommended)
     // Stripe_Customer_ID: stripeCustomer.id 

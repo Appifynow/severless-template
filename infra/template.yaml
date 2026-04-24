@@ -23,6 +23,9 @@ Parameters:
   ZOHOREFRESHTOKEN:
     Type: String
     NoEcho: true
+  STRIPESECRETKEY:
+    Type: String
+    NoEcho: true
 
 Conditions:
   EnableCustomDomain: !Equals [ !Ref UseCustomDomain, "true" ]
@@ -182,6 +185,7 @@ Resources:
           ZOHO_CLIENT_SECRET: !Ref ZOHOCLIENTSECRET
           ZOHO_ACCESS_TOKEN: !Ref ZOHOACCESSTOKEN
           ZOHO_REFRESH_TOKEN: !Ref ZOHOREFRESHTOKEN
+          STRIPE_SECRET_KEY: !Ref STRIPESECRETKEY
           TABLE_NAME: !Ref DataTable 
       Policies:
         - DynamoDBCrudPolicy:
@@ -190,6 +194,9 @@ Resources:
 Outputs:
   CloudFrontURL:
     Value: !GetAtt WebsiteDistribution.DomainName
+    
+  DistributionID:
+    Value: !GetAtt WebsiteDistribution.Id
   
   Nameservers:
     Description: "Copy these 4 values into your IONOS Nameserver settings"
