@@ -7,7 +7,7 @@
   "scripts": {
     "start": "cross-env LOCAL=true tsx watch ./src/tests/local.ts",
     "prebuild": "tsc --noEmit",
-    "build": "rm -rf dist && esbuild src/index.ts --bundle --external:@aws-sdk/* --external:/opt/nodejs/* --platform=node --format=esm --target=node22 --outfile=dist/index.mjs",
+    "build": "rm -rf dist && esbuild src/worker.ts src/index.ts --bundle --external:@aws-sdk/* --external:/opt/nodejs/* --platform=node --format=esm --out-extension:.js=.mjs --target=node22 --outdir=dist",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -15,6 +15,7 @@
   "license": "ISC",
   "dependencies": {
     "@aws-sdk/client-dynamodb": "^3.490.0",
+    "@aws-sdk/client-lambda": "^3.1037.0",
     "@aws-sdk/lib-dynamodb": "^3.1030.0",
     "aws-lambda": "^1.0.7"
   },

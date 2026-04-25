@@ -22,7 +22,12 @@ export const createNewContact = async (contact: Partial<BiginContact>, token?: s
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ data: [contact], duplicate_check_fields: ['Last_Name', 'First_Name', 'Email'] })
-    }).then(res=>res.json() as Promise<ZOHORecordCreateResponse>).then(contacts=>contacts.data[0]) // this function only creates one
+    }).then(res=>{ 
+        if(res.ok)
+            return res.json() as Promise<ZOHORecordCreateResponse>
+        else
+            throw new Error(`ZOHO Responded :${res.status} ${res.statusText}`)
+}).then(contacts=>contacts.data[0]) // this function only creates one
 }
 
 export const createDeal = async (deal: ZOHODeal, token?: string) => {
@@ -33,7 +38,12 @@ export const createDeal = async (deal: ZOHODeal, token?: string) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ data: [deal] })
-    });
+    }).then((res)=>{
+        if(res.ok)
+            return res.json()
+        else
+            throw new Error(`${res.status}: ${res.statusText}`)
+    })
 }
 
 export default { createDeal, getAccessToken, createNewContact }
