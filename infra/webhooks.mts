@@ -1,5 +1,6 @@
 import Stripe from 'stripe';
 import dotenv from 'dotenv';
+import { getAccessToken } from '../apps/backend/src/zoho'
 
 dotenv.config();
 
@@ -55,9 +56,31 @@ async function checkForWebhook(): Promise<boolean>{
     }
    
 }
+const zohoWebhookRegister = () =>{
+    return fetch('https://zohoapis.com/bigin/v2/actions/watch', {
+        method: 'POST',
+        headers: new Headers({
+            Authorization: `Zoho-oauthtoken ${getAccessToken()}`,
+            'Content-type': 'application/json'
+        }),
+        body: JSON.stringify({
+            watch: [
+                {
+                    events: [
+                        'Products.all',
+                    ],
+                    notify_url: `${process.env.VITE_API_URL}product`
+                }
+            ]
+        })
+    })
+}
+
 
 const shouldCreateWebHook = await checkForWebhook()
 if(shouldCreateWebHook)
     createWebhookEndpoint();
+
+
 
 

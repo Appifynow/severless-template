@@ -1,8 +1,6 @@
-import { LambdaClient, InvokeCommand, InvocationType } from "@aws-sdk/client-lambda";
-import { APIGatewayProxyEventV2 } from "aws-lambda";
-import { Context } from "vm";
-import { HTTPMethods, respond } from "./utils";
-import type { StripeWebhookEvent } from "./worker";
+import { APIGatewayProxyEventV2, Context } from "aws-lambda";
+import { createWorker, HTTPMethods, respond, WorkerTasks } from "./utils";
+import { StripeWebhookEvent } from "./worker";
 
 
 export const stripeWebhookHandler  = async (
@@ -10,19 +8,6 @@ export const stripeWebhookHandler  = async (
   context: Context,
   method: HTTPMethods
 ) => {
-  const site = process.env.DOMAIN
-  const stackName = `${site}-stack`
-  const FunctionName = `${stackName}-worker`
-    if(!req.body){
-      return respond(400, 'no body')
-    }
-    const client = new LambdaClient({});
-    const command = new InvokeCommand({
-    FunctionName: process.env.WORKER_ARN,
-    InvocationType: InvocationType.Event,
-    Payload: JSON.stringify(req.body),
-    });
-
-const response = await client.send(command);
-return respond(response.StatusCode ?? 200, {message: 'accepted'} ); 
+  const response = await createWorker({ task: WorkerTasks.StripeWebhook, event: req.body })
+  return respond(response.StatusCode ?? 200, {message: 'accepted'} ); 
 }

@@ -45,21 +45,3 @@ aws cloudfront create-invalidation --distribution-id $"DIST_ID" --paths "/*
 
 #call update function to populate products on first deploy
 curl -X PUT "$VITE_API_URL"products"
-
-## set up notification for change in products to hit the lambda function update url.
-#need a new scope for this: ZohoBigin.notifications.ALL
-export tempToken=$(curl -sSX POST "https://accounts.zoho.com/oauth/v2/token?refresh_token=$ZOHO_REFRESH_TOKEN&client_id=$ZOHO_CLIENT_ID&client_secret=$ZOHO_CLIENT_SECRET&grant_type=refresh_token" -H "Content-Type: application/x-www-form-urlencoded" | jq -r '.access_token')
-curl -X POST https://zohoapis.com/bigin/v2/actions/watch \
-  -H "Authorization: Zoho-oauthtoken $tempToken" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "watch": [
-       {
-            "channel_id": "$Site",
-            "events": [
-                "Products.all"
-            ],
-            "token": "${Site}",
-            "notify_url": "'$VITE_API_URL'update"
-        }]
-      }'
