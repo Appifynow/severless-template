@@ -76,7 +76,7 @@ export const handler = async (payload: WorkerPayload) => {
             Closing_Date: new Date().toISOString().split("T")[0],
             Sub_Pipeline: "7374418000000607001", // these can be found in url on zoho page
             Stage: "Order Received",
-            Amount: (checkout.amount_total ?? 1) / 100,
+            Amount: products.map(({price, quantity})=>{return ( quantity ?? 1 ) * (price?.unit_amount ?? 0)}).reduce((total, money)=>total += money),
             Contact_Name: { id: newCustomer.details.id },
             Associated_Products: products?.map(
               ({ quantity, name, price: List_Price, id }) => {
